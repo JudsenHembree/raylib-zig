@@ -40,6 +40,7 @@ pub fn build(b: *std.Build) void {
     const raylib_dep = b.dependency("raylib", .{
         .target = target,
         .optimize = raylib_optimize,
+        .use_wayland = true,
     });
     exe.linkLibrary(raylib_dep.artifact("raylib"));
 
