@@ -1,4 +1,5 @@
 # zigraylib
+THIS IS A COPY OF A PUBLIC REPO. I AM NOT THE AUTHOR OF THIS CODE. I AM USING IT FOR LEARNING PURPOSES.
 A fairly minimal [raylib](https://www.raylib.com/) [zig](https://ziglang.org/download/) example codebase using the zig package manager.
 
 This example requires one of the recent development releases of zig.
