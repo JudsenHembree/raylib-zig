@@ -401,11 +401,35 @@ endif
 ifeq ($(PLATFORM),PLATFORM_DRM)
     # without EGL_NO_X11 eglplatform.h tears Xlib.h in which tears X.h in
     # which contains a conflicting type Font
+    echo "Calling PLATFORM_DRM"
     CFLAGS += -DEGL_NO_X11
     CFLAGS += -Werror=implicit-function-declaration
+        ifeq ($(GLFW_LINUX_ENABLE_WAYLAND),TRUE)
+            CFLAGS += -D_GLFW_WAYLAND
+            LDFLAGS += $(shell pkg-config wayland-client wayland-cursor wayland-egl xkbcommon --libs)
+
+            WL_PROTOCOLS_DIR := external/glfw/deps/wayland
+
+            wl_generate = \
+                $(eval protocol=$(1)) \
+                $(eval basename=$(2)) \
+                $(shell wayland-scanner client-header $(protocol) $(RAYLIB_SRC_PATH)/$(basename).h) \
+                $(shell wayland-scanner private-code $(protocol) $(RAYLIB_SRC_PATH)/$(basename)-code.h)
+
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/wayland.xml, wayland-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/xdg-shell.xml, xdg-shell-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/xdg-decoration-unstable-v1.xml, xdg-decoration-unstable-v1-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/viewporter.xml, viewporter-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/relative-pointer-unstable-v1.xml, relative-pointer-unstable-v1-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/pointer-constraints-unstable-v1.xml, pointer-constraints-unstable-v1-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/fractional-scale-v1.xml, fractional-scale-v1-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/xdg-activation-v1.xml, xdg-activation-v1-client-protocol)
+            $(call wl_generate, $(WL_PROTOCOLS_DIR)/idle-inhibit-unstable-v1.xml, idle-inhibit-unstable-v1-client-protocol)
+        endif
 endif
 # Use Wayland display on Linux desktop
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
+    echo "Calling PLATFORM_DESKTOP"
     ifeq ($(PLATFORM_OS), LINUX)
         ifeq ($(GLFW_LINUX_ENABLE_X11),TRUE)
             CFLAGS += -D_GLFW_X11

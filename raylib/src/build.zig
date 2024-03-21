@@ -51,7 +51,48 @@ pub fn addRaylib(b: *std.Build, target: anytype, optimize: std.builtin.OptimizeM
 
     // No GLFW required on PLATFORM_DRM
     if (!options.platform_drm) {
+        std.debug.print("Adding GLFW include path\n", .{});
+
         raylib.addIncludePath(.{ .cwd_relative = srcdir ++ "/external/glfw/include" });
+        if (options.use_wayland) {
+            const path = srcdir ++ "/external/glfw/deps/wayland";
+            raylib.addIncludePath(.{ .cwd_relative = path });
+            const protocol_files = &[_][]const u8{
+                "wayland.xml",
+                "viewporter.xml",
+                "xdg-shell.xml",
+                "idle-inhibit-unstable-v1.xml",
+                "pointer-constraints-unstable-v1.xml",
+                "relative-pointer-unstable-v1.xml",
+                "fractional-scale-v1.xml",
+                "xdg-activation-v1.xml",
+                "xdg-decoration-unstable-v1.xml",
+            };
+            for (protocol_files) |protocol_file| {
+                // trim the .xml extension
+                const joined = std.fs.path.join(gpa, &[_][]const u8{ path, protocol_file }) catch unreachable;
+                defer gpa.free(joined);
+                const header_file = std.mem.join(gpa, "", &.{ joined[0 .. joined.len - 4], "-client-protocol.h" }) catch unreachable;
+                defer gpa.free(header_file);
+                const code_file = std.mem.join(gpa, "", &.{ joined[0 .. joined.len - 4], "-client-protocol-code.h" }) catch unreachable;
+                defer gpa.free(code_file);
+                std.debug.print("generating header_file: {s}\n", .{header_file});
+                std.debug.print("generating code_file: {s}\n", .{code_file});
+
+                _ = b.run(&.{
+                    "wayland-scanner",
+                    "client-header",
+                    joined,
+                    header_file,
+                });
+                _ = b.run(&.{
+                    "wayland-scanner",
+                    "private-code",
+                    joined,
+                    code_file,
+                });
+            }
+        }
     }
 
     addCSourceFilesVersioned(raylib, &.{
@@ -117,17 +158,14 @@ pub fn addRaylib(b: *std.Build, target: anytype, optimize: std.builtin.OptimizeM
                 raylib.linkSystemLibrary("m");
                 if (options.use_wayland) {
                     raylib.linkSystemLibrary("wayland-client");
-
                     raylib.defineCMacro("CUSTOMIZE_BUILD", null);
-                    raylib.defineCMacro("USE_WAYLAND", null);
                     raylib.defineCMacro("GLFW_BUILD_WAYLAND", null);
                     raylib.defineCMacro("_GLFW_WAYLAND", null);
+                    raylib.defineCMacro("GLFW_LINUX_ENABLE_WAYLAND", null);
                 } else {
                     raylib.linkSystemLibrary("X11");
                     raylib.defineCMacro("PLATFORM_DESKTOP", null);
                 }
-                raylib.addLibraryPath(.{ .path = "/usr/lib" });
-                raylib.addIncludePath(.{ .path = "/usr/include" });
             } else {
                 raylib.linkSystemLibrary("GLESv2");
                 raylib.linkSystemLibrary("EGL");
